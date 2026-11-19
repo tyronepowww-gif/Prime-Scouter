@@ -1,0 +1,1301 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Namekian Elder Scouter — Regulated Power</title>
+<style>
+:root {
+  --ink:#1a1a1a;
+  --paper:#f7f7f5;
+  --mut:#6b6b6b;
+  --line:#e0e0dc;
+  --namek:#2e7d4f;
+  --namek-soft:rgba(46,125,79,.10);
+  --namek-line:rgba(46,125,79,.35);
+  --bad:#b3382e;
+}
+* {box-sizing:border-box;margin:0}
+body {
+  font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  line-height:1.5;
+}
+.wrap {max-width:640px;margin:0 auto;padding:24px 16px 64px}
+header {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:16px;
+}
+h1 {font-size:20px;font-weight:600}
+.sub {font-size:12px;color:var(--mut)}
+.panel {
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.view {
+  position:relative;
+  border-radius:10px;
+  overflow:hidden;
+  background:#111;
+  height:240px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+video {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transform:scaleX(-1);
+  display:none;
+}
+.reticle {
+  position:absolute;
+  left:50%;
+  top:42%;
+  width:120px;
+  height:120px;
+  transform:translate(-50%,-50%);
+  border:1.5px solid rgba(120,220,160,.8);
+  border-radius:50%;
+  display:none;
+}
+.reticle::after {
+  content:"";
+  position:absolute;
+  inset:32px;
+  border:1px dashed rgba(120,220,160,.45);
+  border-radius:50%;
+}
+.scanline {
+  position:absolute;
+  left:0;
+  right:0;
+  height:2px;
+  top:0;
+  background:rgba(120,220,160,.55);
+  opacity:0;
+}
+.scanning .scanline {
+  opacity:1;
+  animation:sl 2.4s ease-in-out infinite;
+}
+@keyframes sl {
+  0%{top:0}
+  50%{top:100%}
+  100%{top:0}
+}
+.hudstat {
+  position:absolute;
+  left:12px;
+  bottom:10px;
+  font-size:12px;
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.7);
+  font-variant-numeric:tabular-nums;
+}
+#wave {
+  width:100%;
+  height:72px;
+  background:#0c1712;
+  border-radius:8px;
+  display:none;
+}
+.row {display:flex;align-items:baseline;gap:12px}
+.pl {
+  font-size:44px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
+}
+.note {font-size:12px;color:var(--mut)}
+.sec {
+  font-size:12px;
+  font-weight:600;
+  color:var(--mut);
+  letter-spacing:.02em;
+  margin-top:4px;
+}
+.resline {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-size:14px;
+  padding:6px 0;
+  border-bottom:1px solid var(--line);
+  font-variant-numeric:tabular-nums;
+}
+.resline:last-child {border-bottom:none}
+.resline .k {color:var(--mut)}
+.resline .v {font-weight:500;text-align:right}
+.tol {font-weight:400;font-size:12px;color:var(--mut)}
+.tag {
+  font-size:11px;
+  font-weight:600;
+  padding:2px 8px;
+  border-radius:6px;
+  margin-left:6px;
+  background:var(--namek-soft);
+  color:var(--namek);
+}
+.truebox {
+  border:1px solid var(--namek-line);
+  border-radius:10px;
+  padding:12px;
+}
+.truebox .pl {color:var(--namek)}
+.elder {
+  font-size:14px;
+  padding:12px;
+  border:1px dashed var(--line);
+  border-radius:10px;
+  color:var(--mut);
+}
+.elder b {color:var(--ink);font-weight:600}
+.btn {
+  font:inherit;
+  padding:10px 18px;
+  border-radius:10px;
+  border:1px solid var(--ink);
+  background:var(--ink);
+  color:#fff;
+  cursor:pointer;
+  font-weight:500;
+}
+.btn:disabled {opacity:.4;cursor:default}
+.btn.ghost {background:transparent;color:var(--ink)}
+.controls {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+select {
+  font:inherit;
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid var(--line);
+  background:#fff;
+}
+.hist {font-size:13px;color:var(--mut)}
+.histline {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  padding:4px 0;
+  border-bottom:1px solid var(--line);
+  font-variant-numeric:tabular-nums;
+}
+footer {
+  font-size:12px;
+  color:var(--mut);
+  margin-top:16px;
+  line-height:1.6;
+}
+.flicker {animation:fl .12s steps(2) 8}
+@keyframes fl {50%{opacity:.2}}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Namekian elder scouter</h1>
+  <div class="sub" id="mode">at rest</div>
+</header>
+
+<div class="panel">
+
+  <div class="view" id="view">
+    <video id="cam" autoplay muted playsinline></video>
+    <div class="reticle" id="reticle"></div>
+    <div class="scanline"></div>
+    <div class="hudstat" id="hudstat">the lens waits</div>
+  </div>
+
+  <canvas id="wave" width="600" height="72"></canvas>
+
+  <div class="row">
+    <div class="pl" id="pl">—</div>
+    <div class="note" id="plnote">unmeasured</div>
+  </div>
+
+  <div id="results"></div>
+  <div id="truebox"></div>
+  <div id="elder"></div>
+
+  <div class="controls">
+    <button class="btn" id="go">Commune with the lens</button>
+
+    <select id="dur">
+      <option value="12">12 s — quick</option>
+      <option value="20" selected>20 s — standard</option>
+      <option value="30">30 s — elder's choice</option>
+    </select>
+
+    <button class="btn ghost" id="historyBtn">History</button>
+  </div>
+
+  <div class="hist" id="history" style="display:none"></div>
+
+</div>
+
+<footer>
+  <b>Prime Regulated Power System</b><br>
+  Farmer reference: 5 · Average adult reference: 37.5 ·
+  Roshi reference: 139 · Goku debut reference: 416 ·
+  Krillin reference: 1,770 · Frieza reference: 120,000,000.
+
+  <br><br>
+
+  The instrument measures optical signal characteristics.
+  The fictional power scale interprets those characteristics
+  through fixed reference anchors. Unusual readings are retained.
+  Confidence describes signal quality, not fighting ability.
+</footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var $ = function(id){
+  return document.getElementById(id);
+};
+
+var video = $("cam");
+var view = $("view");
+var wave = $("wave");
+var wctx = wave.getContext("2d");
+
+var FPS = 30;
+var signal = [];
+var lum = [];
+var sampling = false;
+var stream = null;
+var scanTimer = null;
+var cameraTimeout = null;
+var tick = 0;
+var requestedDuration = 20;
+
+/*
+==================================================
+PRIME POWER CALIBRATION
+==================================================
+
+The anchors establish the fictional scale.
+
+The curve interpolates logarithmically between anchors.
+It continues beyond the final anchor rather than stopping
+at Frieza's reference value.
+
+The camera does not identify characters.
+The anchors are adjustable design references.
+*/
+
+var POWER_ANCHORS = [
+  {score:0, power:5, name:"Farmer reference"},
+  {score:50, power:37.5, name:"Average adult reference"},
+  {score:60, power:139, name:"Roshi reference"},
+  {score:70, power:416, name:"Goku debut reference"},
+  {score:80, power:1770, name:"Krillin reference"},
+  {score:90, power:530000, name:"High-power reference"},
+  {score:100, power:120000000, name:"Frieza reference"}
+];
+
+/*
+==================================================
+POWER SCALING
+==================================================
+*/
+
+function regulatedPowerLevel(score){
+  var value = Math.max(0,score);
+
+  // Extrapolate above the final anchor.
+  if(value >= 100){
+    var last = POWER_ANCHORS[6];
+    var previous = POWER_ANCHORS[5];
+
+    var slope =
+      Math.log(last.power/previous.power) /
+      (last.score-previous.score);
+
+    var result =
+      last.power*Math.exp(slope*(value-100));
+
+    return Math.max(1,Math.round(result));
+  }
+
+  // Extrapolate below the first interval if necessary.
+  if(value < 0) value = 0;
+
+  for(var i=0;i<POWER_ANCHORS.length-1;i++){
+    var a = POWER_ANCHORS[i];
+    var b = POWER_ANCHORS[i+1];
+
+    if(value >= a.score && value <= b.score){
+      var progress =
+        (value-a.score)/(b.score-a.score);
+
+      var logPower =
+        Math.log(a.power)+
+        progress*(Math.log(b.power)-Math.log(a.power));
+
+      return Math.max(1,Math.round(Math.exp(logPower)));
+    }
+  }
+
+  return Math.max(1,Math.round(POWER_ANCHORS[0].power));
+}
+
+/*
+The original instrument score has a nominal range of 2–67.
+It is converted to a signal index, but the index is not
+capped at 100. This allows exceptional readings to continue
+beyond the final power anchor.
+*/
+
+function normalizeSignalScore(score){
+  return Math.max(0,((score-2)/65)*100);
+}
+
+function getPowerTier(score){
+  if(score < 25) return "Minimal signal range";
+  if(score < 50) return "Low power range";
+  if(score < 60) return "Mortal range";
+  if(score < 70) return "Roshi reference range";
+  if(score < 80) return "Advanced fighter range";
+  if(score < 90) return "High-power range";
+  if(score < 100) return "Extreme-power range";
+  return "Beyond reference scale";
+}
+
+/*
+==================================================
+INTERFACE HELPERS
+==================================================
+*/
+
+function hud(text){
+  $("hudstat").textContent = text;
+}
+
+function elderSay(text){
+  var el = $("elder");
+  el.innerHTML = "";
+
+  var b = document.createElement("b");
+  b.textContent = "The elder observes: ";
+
+  el.appendChild(b);
+  el.appendChild(document.createTextNode(text));
+}
+
+function line(key,value,tolerance,tag){
+  var d = document.createElement("div");
+  d.className = "resline";
+
+  var k = document.createElement("span");
+  k.className = "k";
+  k.textContent = key;
+
+  var v = document.createElement("span");
+  v.className = "v";
+  v.textContent = value;
+
+  if(tolerance){
+    var t = document.createElement("span");
+    t.className = "tol";
+    t.textContent = " ± "+tolerance;
+    v.appendChild(t);
+  }
+
+  if(tag){
+    var badge = document.createElement("span");
+    badge.className = "tag";
+    badge.textContent = tag;
+    v.appendChild(badge);
+  }
+
+  d.appendChild(k);
+  d.appendChild(v);
+
+  return d;
+}
+
+function clamp(value,min,max){
+  return Math.max(min,Math.min(max,value));
+}
+
+function median(values){
+  if(!values.length) return null;
+
+  var sorted = values.slice().sort(function(a,b){
+    return a-b;
+  });
+
+  var middle = Math.floor(sorted.length/2);
+
+  return sorted.length%2
+    ? sorted[middle]
+    : (sorted[middle-1]+sorted[middle])/2;
+}
+
+function average(values){
+  if(!values.length) return 0;
+
+  return values.reduce(function(a,b){
+    return a+b;
+  },0)/values.length;
+}
+
+function standardDeviation(values){
+  if(!values.length) return 0;
+
+  var m = average(values);
+
+  var variance = average(values.map(function(v){
+    return Math.pow(v-m,2);
+  }));
+
+  return Math.sqrt(variance);
+}
+
+function resetDisplay(){
+  $("results").innerHTML = "";
+  $("truebox").innerHTML = "";
+  $("elder").innerHTML = "";
+
+  $("pl").textContent = "—";
+  $("pl").style.color = "";
+  $("pl").classList.remove("flicker");
+
+  $("plnote").textContent = "reaching out…";
+}
+
+/*
+==================================================
+CAMERA MANAGEMENT
+==================================================
+*/
+
+function stopCamera(){
+  if(stream){
+    stream.getTracks().forEach(function(track){
+      track.stop();
+    });
+    stream = null;
+  }
+
+  video.srcObject = null;
+  video.style.display = "none";
+  $("reticle").style.display = "none";
+}
+
+function finishCamera(){
+  clearInterval(scanTimer);
+  clearTimeout(cameraTimeout);
+
+  sampling = false;
+  view.classList.remove("scanning");
+
+  stopCamera();
+
+  $("go").disabled = false;
+  $("go").textContent = "Commune again";
+  $("mode").textContent = "at rest";
+}
+
+function provisionalReading(reason){
+  /*
+  No scan data exists when camera access is unavailable.
+  We still display a number, but identify it as a fallback,
+  not as a measured power level.
+  */
+
+  var base = 2;
+  var index = normalizeSignalScore(base);
+  var power = regulatedPowerLevel(index);
+
+  $("mode").textContent = "provisional reading";
+  $("pl").textContent = base;
+  $("plnote").textContent = "fallback instrument score";
+
+  $("results").innerHTML = "";
+
+  $("results").appendChild(
+    line("scan status","No optical data")
+  );
+
+  $("results").appendChild(
+    line("confidence","Unavailable")
+  );
+
+  displayPowerBox(
+    power,
+    index,
+    "Provisional — no camera data",
+    "Fallback reading"
+  );
+
+  elderSay(
+    "The lens could not receive a signal. I have assigned " +
+    power.toLocaleString() +
+    " as a fallback reading, not a measured result. " +
+    reason
+  );
+
+  saveHist(base,power,index,"Provisional",null,null,"Unavailable");
+
+  finishCamera();
+}
+
+function startCamera(){
+  if(sampling) return;
+
+  resetDisplay();
+
+  if(!(navigator.mediaDevices &&
+       navigator.mediaDevices.getUserMedia)){
+    provisionalReading("The optical thread is unavailable.");
+    return;
+  }
+
+  $("go").disabled = true;
+  $("mode").textContent = "opening lens";
+  hud("opening the optical thread…");
+
+  cameraTimeout = setTimeout(function(){
+    if(!sampling && !stream){
+      provisionalReading("Camera initialization timed out.");
+    }
+  },10000);
+
+  navigator.mediaDevices.getUserMedia({
+    video:{
+      width:{ideal:640},
+      height:{ideal:480},
+      facingMode:"user"
+    },
+    audio:false
+  })
+  .then(function(s){
+    clearTimeout(cameraTimeout);
+
+    stream = s;
+    video.srcObject = s;
+    video.style.display = "block";
+    $("reticle").style.display = "block";
+    $("wave").style.display = "block";
+
+    var started = false;
+
+    function ready(){
+      if(started) return;
+      started = true;
+
+      video.play().then(function(){
+        $("mode").textContent = "communion open";
+        startSample();
+      }).catch(function(){
+        provisionalReading("Camera playback could not begin.");
+      });
+    }
+
+    video.onloadedmetadata = ready;
+
+    if(video.readyState >= 1){
+      ready();
+    }
+
+    var tracks = s.getVideoTracks();
+
+    if(tracks.length){
+      tracks[0].addEventListener("ended",function(){
+        if(sampling){
+          analyze();
+        }
+      });
+    }
+  })
+  .catch(function(error){
+    clearTimeout(cameraTimeout);
+
+    var message = "The mirror was unavailable.";
+
+    if(error && error.name==="NotFoundError"){
+      message = "No camera was found.";
+    }else if(error && error.name==="NotAllowedError"){
+      message = "Camera permission was declined.";
+    }else if(error && error.name==="NotReadableError"){
+      message = "The camera is already in use.";
+    }
+
+    provisionalReading(message);
+  });
+}
+
+$("go").addEventListener("click",startCamera);
+
+/*
+==================================================
+WAVEFORM
+==================================================
+*/
+
+var off = document.createElement("canvas");
+off.width = 128;
+off.height = 128;
+
+var octx = off.getContext("2d",{
+  willReadFrequently:true
+});
+
+function drawWave(){
+  wctx.fillStyle = "#0c1712";
+  wctx.fillRect(0,0,wave.width,wave.height);
+
+  var n = signal.length;
+  if(n < 2) return;
+
+  var viewN = Math.min(n,FPS*8);
+  var seg = signal.slice(n-viewN);
+
+  var mn = Math.min.apply(null,seg);
+  var mx = Math.max.apply(null,seg);
+  var range = Math.max(1e-6,mx-mn);
+
+  wctx.strokeStyle = "#7adca0";
+  wctx.lineWidth = 1.5;
+  wctx.beginPath();
+
+  for(var i=0;i<viewN;i++){
+    var x = i/(viewN-1)*wave.width;
+    var y = 8+(1-(seg[i]-mn)/range)*(wave.height-16);
+
+    if(i===0){
+      wctx.moveTo(x,y);
+    }else{
+      wctx.lineTo(x,y);
+    }
+  }
+
+  wctx.stroke();
+}
+
+/*
+==================================================
+SAMPLING
+==================================================
+*/
+
+function startSample(){
+  requestedDuration = parseInt($("dur").value,10);
+  var total = requestedDuration*FPS;
+
+  signal = [];
+  lum = [];
+  tick = 0;
+  sampling = true;
+
+  view.classList.add("scanning");
+  $("go").disabled = true;
+
+  hud("listening to the small drum — hold still…");
+
+  scanTimer = setInterval(function(){
+    if(!video.videoWidth || !video.videoHeight){
+      return;
+    }
+
+    try{
+      octx.drawImage(video,0,0,128,128);
+
+      var d = octx.getImageData(0,0,128,128).data;
+      var g = 0;
+      var l = 0;
+      var count = 0;
+      var foreground = 0;
+
+      for(var y=0;y<128;y++){
+        for(var x=0;x<128;x++){
+          var i = (y*128+x)*4;
+
+          l +=
+            0.299*d[i]+
+            0.587*d[i+1]+
+            0.114*d[i+2];
+
+          count++;
+
+          if(y>=16 && y<=52 && x>=44 && x<=84){
+            g += d[i+1];
+            foreground++;
+          }
+        }
+      }
+
+      signal.push(foreground ? g/foreground : 0);
+      lum.push(count ? l/count : 0);
+
+    }catch(e){
+      // Keep whatever samples have already been collected.
+      // The analysis stage will still return a number.
+      clearInterval(scanTimer);
+      sampling = false;
+      analyze();
+      return;
+    }
+
+    tick++;
+    drawWave();
+
+    if(tick===Math.floor(total/3)){
+      hud("counting the spaces between beats…");
+    }
+
+    if(tick>=total){
+      clearInterval(scanTimer);
+      sampling = false;
+      analyze();
+    }
+
+  },1000/FPS);
+}
+
+/*
+==================================================
+SIGNAL ANALYSIS
+==================================================
+
+No unusual reading is rejected.
+
+Missing components are recorded as unavailable.
+Available components still contribute to the reading.
+*/
+
+function analyze(){
+  view.classList.remove("scanning");
+
+  var n = signal.length;
+
+  // If the camera produced no usable samples, use fallback.
+  if(n===0){
+    provisionalReading("No usable optical frames were received.");
+    return;
+  }
+
+  var signalMean = average(signal);
+  var signalSD = standardDeviation(signal);
+
+  var lumMean = average(lum);
+  var lumSD = standardDeviation(lum);
+
+  /*
+  Motion estimate:
+  Average frame-to-frame luminance change.
+  */
+
+  var motionValues = [];
+
+  for(var q=1;q<lum.length;q++){
+    motionValues.push(Math.abs(lum[q]-lum[q-1]));
+  }
+
+  var motion = average(motionValues);
+
+  /*
+  Detrending and peak detection.
+  Peaks are used when available, but their absence
+  does not invalidate the scan.
+  */
+
+  var dev = signal.map(function(v){
+    return v-signalMean;
+  });
+
+  var W = FPS;
+
+  var ma = dev.map(function(_,k){
+    var sum = 0;
+    var count = 0;
+
+    for(
+      var j=Math.max(0,k-W);
+      j<=Math.min(n-1,k+W);
+      j++
+    ){
+      sum += dev[j];
+      count++;
+    }
+
+    return dev[k]-sum/count;
+  });
+
+  var maMean = average(ma);
+  var maSD = standardDeviation(ma);
+
+  var peaks = [];
+  var refractory = Math.floor(FPS*0.3);
+
+  if(maSD>0){
+    for(var i=2;i<n-2;i++){
+      if(
+        ma[i]>maSD*0.6 &&
+        ma[i]>=ma[i-1] &&
+        ma[i]>=ma[i+1] &&
+        ma[i]>ma[i-2] &&
+        ma[i]>=ma[i+2]
+      ){
+        if(
+          !peaks.length ||
+          i-peaks[peaks.length-1]>=refractory
+        ){
+          peaks.push(i);
+        }
+      }
+    }
+  }
+
+  /*
+  Inter-beat intervals.
+  */
+
+  var ibi = [];
+
+  for(var p=1;p<peaks.length;p++){
+    ibi.push(
+      (peaks[p]-peaks[p-1])*(1000/FPS)
+    );
+  }
+
+  var bpm = null;
+  var rmssd = null;
+
+  if(ibi.length>=3){
+    var med = median(ibi);
+
+    var filtered = ibi.filter(function(v){
+      return Math.abs(v-med)<Math.abs(med)*0.35;
+    });
+
+    if(filtered.length>=2){
+      bpm = Math.round(60000/average(filtered));
+    }
+
+    if(filtered.length>=3){
+      var sq = 0;
+
+      for(var r=1;r<filtered.length;r++){
+        sq += Math.pow(filtered[r]-filtered[r-1],2);
+      }
+
+      rmssd = Math.round(
+        Math.sqrt(sq/(filtered.length-1))
+      );
+    }
+  }
+
+  /*
+  INSTRUMENT SCORING
+
+  The original three terms remain recognizable.
+
+  Unusual values are bounded within their individual
+  component ranges so that one noisy measurement cannot
+  arbitrarily dominate the total.
+
+  Signal variation is now an additional component.
+  The total is allowed to exceed the old 67-point ceiling.
+  */
+
+  var cardio = 0;
+
+  if(bpm!==null){
+    cardio = clamp(
+      Math.round((120-bpm)*0.35),
+      0,
+      25
+    );
+  }
+
+  var composure = 0;
+
+  if(rmssd!==null){
+    composure = clamp(
+      Math.round(rmssd/8),
+      0,
+      20
+    );
+  }
+
+  var discipline = clamp(
+    Math.round(20-motion*1.5),
+    0,
+    20
+  );
+
+  /*
+  Signal variation contribution.
+
+  This adds information from the measured signal itself.
+  It is logarithmic to reduce sensitivity to large raw
+  camera-channel changes.
+
+  It is a fictional instrument score, not a biological
+  measurement of ki.
+  */
+
+  var variationTerm = clamp(
+    Math.log1p(signalSD)*2,
+    0,
+    20
+  );
+
+  /*
+  Luminance variation contribution.
+
+  A smaller secondary term captures whole-frame changes.
+  */
+
+  var luminanceTerm = clamp(
+    Math.log1p(lumSD)*0.75,
+    0,
+    10
+  );
+
+  var base =
+    2+
+    cardio+
+    composure+
+    discipline+
+    variationTerm+
+    luminanceTerm;
+
+  if(!Number.isFinite(base)){
+    base = 2;
+  }
+
+  // No upper clamp.
+  base = Math.max(0,base);
+
+  var normalized = normalizeSignalScore(base);
+  var power = regulatedPowerLevel(normalized);
+  var tier = getPowerTier(normalized);
+
+  /*
+  Confidence is independent of power.
+  A high reading can have low confidence.
+  */
+
+  var durationRatio = n/(requestedDuration*FPS);
+  var frameConfidence = clamp(durationRatio,0,1);
+
+  var rhythmConfidence =
+    bpm!==null ? 1 : 0.25;
+
+  var signalConfidence =
+    signalSD>0.015 ? 1 : 0.35;
+
+  var confidenceScore = Math.round(
+    (
+      frameConfidence*0.4+
+      rhythmConfidence*0.3+
+      signalConfidence*0.3
+    )*100
+  );
+
+  var confidence =
+    confidenceScore>=85 ? "High" :
+    confidenceScore>=60 ? "Moderate" :
+    "Low";
+
+  renderResult({
+    base:base,
+    normalized:normalized,
+    power:power,
+    tier:tier,
+    bpm:bpm,
+    rmssd:rmssd,
+    motion:motion,
+    peaks:peaks.length,
+    signalMean:signalMean,
+    signalSD:signalSD,
+    lumMean:lumMean,
+    lumSD:lumSD,
+    cardio:cardio,
+    composure:composure,
+    discipline:discipline,
+    variationTerm:variationTerm,
+    luminanceTerm:luminanceTerm,
+    confidence:confidence,
+    confidenceScore:confidenceScore
+  });
+}
+
+/*
+==================================================
+RESULT DISPLAY
+==================================================
+*/
+
+function displayPowerBox(power,index,tier,confidence){
+  var tb = $("truebox");
+  tb.className = "truebox";
+  tb.innerHTML = "";
+
+  var heading = document.createElement("div");
+  heading.className = "sec";
+  heading.style.marginTop = "0";
+  heading.textContent = "Regulated power reading";
+
+  var row = document.createElement("div");
+  row.className = "row";
+
+  var number = document.createElement("div");
+  number.className = "pl";
+  number.textContent = power.toLocaleString();
+
+  var note = document.createElement("div");
+  note.className = "note";
+  note.textContent = tier;
+
+  row.appendChild(number);
+  row.appendChild(note);
+
+  var detail = document.createElement("div");
+  detail.className = "note";
+  detail.style.marginTop = "4px";
+  detail.textContent =
+    "Signal index: "+index.toFixed(2)+
+    " · Confidence: "+confidence;
+
+  tb.appendChild(heading);
+  tb.appendChild(row);
+  tb.appendChild(detail);
+}
+
+function renderResult(data){
+  var r = $("results");
+  r.innerHTML = "";
+
+  var heading = document.createElement("div");
+  heading.className = "sec";
+  heading.textContent = "What the lens heard";
+  r.appendChild(heading);
+
+  r.appendChild(line(
+    "pulse",
+    data.bpm===null ? "No stable beat pattern" : data.bpm+" bpm"
+  ));
+
+  r.appendChild(line(
+    "beat spacing (RMSSD)",
+    data.rmssd===null ? "Unavailable" : data.rmssd+" ms"
+  ));
+
+  r.appendChild(line(
+    "stillness of body",
+    data.motion.toFixed(3)
+  ));
+
+  r.appendChild(line(
+    "detected events",
+    String(data.peaks)
+  ));
+
+  r.appendChild(line(
+    "signal variation",
+    data.signalSD.toFixed(3)
+  ));
+
+  r.appendChild(line(
+    "luminance variation",
+    data.lumSD.toFixed(3)
+  ));
+
+  var s2 = document.createElement("div");
+  s2.className = "sec";
+  s2.textContent = "Instrument sum";
+  r.appendChild(s2);
+
+  r.appendChild(line("cardio term","+"+data.cardio));
+  r.appendChild(line("composure term","+"+data.composure));
+  r.appendChild(line("discipline term","+"+data.discipline));
+  r.appendChild(line("signal variation","+"+data.variationTerm.toFixed(2)));
+  r.appendChild(line("luminance variation","+"+data.luminanceTerm.toFixed(2)));
+  r.appendChild(line("breath of the planet","+2"));
+
+  hud("the drum speaks");
+
+  $("pl").textContent = "0";
+  $("plnote").textContent = "instrument score";
+
+  countUp($("pl"),Math.round(data.base),function(){
+    $("plnote").textContent = "raw instrument score";
+
+    displayPowerBox(
+      data.power,
+      data.normalized,
+      data.tier,
+      data.confidence
+    );
+
+    elderSay(
+      "The lens records "+
+      data.power.toLocaleString()+
+      ". The signal index is "+
+      data.normalized.toFixed(2)+
+      ". Confidence is "+
+      data.confidence.toLowerCase()+
+      ". An unusual reading is not discarded."
+    );
+
+    saveHist(
+      data.base,
+      data.power,
+      data.normalized,
+      data.tier,
+      data.bpm,
+      data.rmssd,
+      data.confidence
+    );
+
+    finishCamera();
+  });
+}
+
+function countUp(el,target,done){
+  var t0 = performance.now();
+  var duration = 1000;
+
+  function step(t){
+    var p = Math.min(1,(t-t0)/duration);
+    var value = Math.round(
+      target*(1-Math.pow(1-p,3))
+    );
+
+    el.textContent = value.toLocaleString();
+
+    if(p<1){
+      requestAnimationFrame(step);
+    }else if(done){
+      done();
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
+/*
+==================================================
+HISTORY
+==================================================
+*/
+
+function saveHist(base,power,index,tier,bpm,rmssd,confidence){
+  try{
+    var h = JSON.parse(
+      localStorage.getItem("scouter_history")||"[]"
+    );
+
+    h.push({
+      t:Date.now(),
+      base:base,
+      power:power,
+      index:index,
+      tier:tier,
+      bpm:bpm,
+      rmssd:rmssd,
+      confidence:confidence
+    });
+
+    localStorage.setItem(
+      "scouter_history",
+      JSON.stringify(h.slice(-50))
+    );
+  }catch(e){
+    console.warn("History could not be saved",e);
+  }
+}
+
+$("historyBtn").addEventListener("click",function(){
+  var el = $("history");
+
+  if(el.style.display==="block"){
+    el.style.display="none";
+    return;
+  }
+
+  var h = [];
+
+  try{
+    h = JSON.parse(
+      localStorage.getItem("scouter_history")||"[]"
+    );
+  }catch(e){}
+
+  el.innerHTML = "";
+
+  var title = document.createElement("div");
+  title.className = "sec";
+  title.textContent = "Gero mode — longitudinal record";
+  el.appendChild(title);
+
+  if(!h.length){
+    var empty = document.createElement("div");
+    empty.style.padding = "8px 0";
+    empty.textContent = "No scans yet.";
+    el.appendChild(empty);
+  }
+
+  h.slice(-10).reverse().forEach(function(s){
+    var row = document.createElement("div");
+    row.className = "histline";
+
+    var date = document.createElement("span");
+    date.textContent = new Date(s.t).toLocaleString();
+
+    var reading = document.createElement("span");
+    reading.textContent =
+      "PL "+Number(s.power||0).toLocaleString()+
+      " · index "+Number(s.index||0).toFixed(1)+
+      " · "+(s.confidence||"Unknown");
+
+    row.appendChild(date);
+    row.appendChild(reading);
+    el.appendChild(row);
+  });
+
+  el.style.display = "block";
+});
+
+/*
+==================================================
+CLEANUP
+==================================================
+*/
+
+window.addEventListener("pagehide",function(){
+  clearInterval(scanTimer);
+  clearTimeout(cameraTimeout);
+  sampling = false;
+  stopCamera();
+});
+
+})();
+</script>
+</body>
+</html>
